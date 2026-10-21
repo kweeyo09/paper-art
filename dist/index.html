@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f1e8">
+  <meta name="description" content="一张红纸，一把剪刀。勾画、裁剪、展开，在指尖创造属于你的中式窗花。">
+  <title>一纸生花 · 剪纸工坊</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="window-preview.css">
+</head>
+<body>
+<svg class="icon-defs" xmlns="http://www.w3.org/2000/svg"><defs>
+<symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="m8 8 12 12M8 16 20 4m-8 8 2 2"/></symbol>
+<symbol id="i-pencil" viewBox="0 0 24 24"><path d="m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0-4-4L5 15l-1 5Z"/></symbol>
+<symbol id="i-undo" viewBox="0 0 24 24"><path d="m9 5-5 5 5 5M4 10h10a6 6 0 0 1 0 12" transform="translate(0 -2)"/></symbol>
+<symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 5 5 5-5 5m5-5H10a6 6 0 0 0 0 12" transform="translate(0 -2)"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></symbol>
+<symbol id="i-open" viewBox="0 0 24 24"><path d="m12 5-8-2v16l8 2 8-2V3l-8 2Zm0 0v16"/></symbol>
+<symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 10a8 8 0 1 1 1 8M4 4v6h6"/></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
+<symbol id="i-close" viewBox="0 0 24 24"><path d="m5 5 14 14M19 5 5 19"/></symbol>
+<symbol id="i-window" viewBox="0 0 24 24"><path d="M3 3h18v18H3zM12 3v18M3 11h18"/></symbol>
+</defs></svg>
+<div class="page">
+  <header class="site-header">
+    <a class="brand" href="./" aria-label="一纸生花首页"><span class="seal">剪<br>纸</span><span>一纸生花<span class="brand-sub">指 尖 上 的 剪 纸 工 坊</span></span></a>
+    <div class="header-right"><span class="header-poem">以纸为笺，以剪为笔</span><button class="text-button" id="help-button">剪纸小笺 <span class="help-circle">?</span></button><button id="language-toggle" class="language-toggle" type="button" lang="en" aria-label="Switch to English">English</button></div>
+  </header>
+  <main>
+    <section class="introduction">
+      <div><h1>一纸一剪，<span>万象生花。</span></h1></div>
+      <div class="intro-art" aria-hidden="true"><canvas id="ornament" width="240" height="240"></canvas><div class="vertical-verse">方寸之间<br>自有天地</div></div>
+    </section>
+    <section class="studio" aria-label="剪纸工作台">
+      <aside class="settings">
+        <div class="section-heading"><h2>折纸</h2><span>起于一张纸</span></div>
+        <div class="fold-options" role="group" aria-label="折纸方式">
+          <button data-fold="4" aria-pressed="false"><svg viewBox="0 0 40 40"><path d="M20 33 8 7h24Z M20 33V7"/></svg><span>四折</span></button>
+          <button data-fold="5" aria-pressed="false"><svg viewBox="0 0 40 40"><path d="m20 33-9-26h18Z M20 33V7"/></svg><span>五折</span></button>
+          <button data-fold="6" class="selected" aria-pressed="true"><svg viewBox="0 0 40 40"><path d="m20 33-7-26h14Z M20 33V7"/></svg><span>六折</span></button>
+        </div>
+        <p class="small-note" id="fold-note">六重对称，剪出繁花之美</p>
+        <div class="paper-section"><div class="section-heading"><h2>纸色</h2><span id="color-name">朱砂</span></div><div class="swatches" role="group" aria-label="选择纸色">
+          <button data-color="#b92e2a" data-name="朱砂" class="swatch selected" style="--swatch:#b92e2a" aria-label="朱砂红" aria-pressed="true"></button>
+          <button data-color="#8c2939" data-name="胭脂" class="swatch" style="--swatch:#8c2939" aria-label="胭脂红" aria-pressed="false"></button>
+          <button data-color="#b38437" data-name="秋香" class="swatch" style="--swatch:#b38437" aria-label="秋香金" aria-pressed="false"></button>
+          <button data-color="#376860" data-name="松烟" class="swatch" style="--swatch:#376860" aria-label="松烟绿" aria-pressed="false"></button>
+        </div></div>
+        <div class="tools-section"><div class="section-heading"><h2>执笔与剪</h2></div>
+          <button class="tool selected" data-tool="cut" aria-pressed="true"><svg><use href="#i-scissors"/></svg><span>剪刀<small>圈选一处，轻轻剪去</small></span><kbd>剪</kbd></button>
+          <button class="tool" data-tool="draw" aria-pressed="false"><svg><use href="#i-pencil"/></svg><span>画笔<small>先勾勒心中的图案</small></span><kbd>绘</kbd></button>
+          <label class="guide-option"><input type="checkbox" id="guide-toggle" checked><span class="checkmark"></span>显示折痕参考线</label>
+        </div>
+        <div class="side-note"><span>慢慢来，</span><br>美好藏在留白里。<svg><use href="#i-scissors"/></svg></div>
+      </aside>
+      <div class="work-area">
+        <div class="work-header"><div><span class="status-dot"></span><span id="stage-label">折纸 · 待你落剪</span></div><div class="history-controls"><button id="undo" class="icon-button" title="撤销（Ctrl+Z）" aria-label="撤销" disabled><svg><use href="#i-undo"/></svg></button><button id="redo" class="icon-button" title="重做（Ctrl+Shift+Z）" aria-label="重做" disabled><svg><use href="#i-redo"/></svg></button><span class="toolbar-divider"></span><button id="reset" class="icon-button" title="重新开始" aria-label="重新开始"><svg><use href="#i-reset"/></svg></button></div></div>
+        <div class="canvas-wrap" id="canvas-wrap"><span class="corner top-left"></span><span class="corner top-right"></span><span class="corner bottom-left"></span><span class="corner bottom-right"></span>
+          <span class="canvas-vertical" aria-hidden="true">虚实相生 · 剪出心意</span>
+          <canvas id="paper-canvas" width="1200" height="1080" tabindex="0" aria-label="剪纸画布。拖动画笔勾画；使用剪刀拖动圈选，松开后剪去。也可点击逐点圈选，按回车完成，退出键取消。"></canvas>
+          <div class="canvas-bottom"><span id="canvas-mode">六折纸</span><span id="cut-count">尚未落剪</span></div>
+        </div>
+        <div class="work-bottom"><p id="instruction"><svg><use href="#i-scissors"/></svg><span>按住拖动，圈出想剪去的部分，松开即可裁剪</span></p><button id="reveal" class="primary-button"><svg><use href="#i-open"/></svg><span>展开 · 见惊喜</span><svg class="arrow"><use href="#i-arrow"/></svg></button></div>
+      </div>
+      <aside class="inspiration"><div class="section-heading"><h2>从一朵花开始</h2></div><p class="inspiration-intro">不妨借一缕灵感，<br>再剪出自己的模样。</p>
+        <button class="pattern" data-pattern="bloom"><canvas width="220" height="220" aria-hidden="true"></canvas><span>团花<small>花开圆满</small><svg><use href="#i-arrow"/></svg></span></button>
+        <button class="pattern" data-pattern="star"><canvas width="220" height="220" aria-hidden="true"></canvas><span>繁星<small>星河入梦</small><svg><use href="#i-arrow"/></svg></span></button>
+        <button class="pattern" data-pattern="leaf"><canvas width="220" height="220" aria-hidden="true"></canvas><span>叶语<small>一叶知秋</small><svg><use href="#i-arrow"/></svg></span></button>
+        <span class="pattern-note">点击花样，接着创作</span>
+      </aside>
+    </section>
+    <section id="window-preview" class="window-preview" hidden aria-labelledby="window-heading">
+      <div class="window-heading-row"><div><button id="window-back" class="text-button"><svg class="back-arrow"><use href="#i-arrow"/></svg><span>回到剪纸台</span></button><h2 id="window-heading" tabindex="-1">纸映窗间</h2><p>把心意贴上窗，让光穿过你的剪纸。</p></div><div class="light-options" role="group" aria-label="选择窗外光线">
+        <button data-light="morning" aria-pressed="true"><span class="light-dot morning-dot"></span><span>晨光</span></button>
+        <button data-light="snow" aria-pressed="false"><span class="light-dot snow-dot"></span><span>雪景</span></button>
+        <button data-light="sunset" aria-pressed="false"><span class="light-dot sunset-dot"></span><span>暖阳落日</span></button>
+      </div></div>
+      <div class="window-scene" id="window-scene" data-light="morning">
+        <canvas id="window-landscape" width="1600" height="1000" aria-hidden="true"></canvas>
+        <div class="window-glass" id="window-glass"><div class="glass-reflection" aria-hidden="true"></div><div class="snowfall" id="snowfall" aria-hidden="true"></div><canvas id="window-art" width="1200" height="1200" role="img" tabindex="0" aria-label="窗上的剪纸，可拖动或使用方向键移动"></canvas></div>
+        <div class="window-frame" aria-hidden="true"><span class="frame-top"></span><span class="frame-bottom"></span><span class="frame-left"></span><span class="frame-right"></span><span class="frame-rail rail-left"></span><span class="frame-rail rail-right"></span><span class="frame-crossbar"></span></div>
+        <div class="window-sill" aria-hidden="true"></div>
+      </div>
+      <div class="window-controls"><p><svg><use href="#i-window"/></svg><span>拖动剪纸，找到喜欢的位置；方向键也能移动。</span></p><div class="window-sizing"><label for="window-size">剪纸大小</label><input id="window-size" type="range" min="25" max="90" value="62"><output id="window-size-value" for="window-size">62%</output><button id="window-center" class="text-button">重新居中</button></div></div>
+      <div class="window-camera" hidden><label for="window-angle">观察角度</label><input id="window-angle" type="range" min="-25" max="25" value="9"><output id="window-angle-value" for="window-angle">9°</output></div>
+      <p id="window-render-status" class="render-status" role="status"></p>
+      <p class="window-caption" id="window-caption" role="status">晨光轻透，纸上的每一处留白都醒了。</p>
+    </section>
+    <div class="below-studio"><p><span class="tiny-seal">心</span> 剪去的是纸，留下的是心意。</p><div class="draft-controls"><button id="resume-draft" class="text-button" hidden>继续上次的剪纸</button><span id="save-status">作品仅保存在此浏览器</span></div></div>
+  </main>
+  <footer><span>一纸生花</span><span>折 · 画 · 剪 · 展</span></footer>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<dialog id="help-dialog"><button class="dialog-close icon-button" aria-label="关闭说明"><svg><use href="#i-close"/></svg></button><span class="dialog-seal">剪</span><h2>一张纸的奇妙旅程</h2><ol><li><strong>折一折</strong><p>选择四折、五折或六折，得到四、五或六重对称的花样。这里的折数指花样的对称方式。</p></li><li><strong>画一画</strong><p>用画笔在红纸上勾勒草图。铅笔线只是参考，展开与导出时不会显示。</p></li><li><strong>剪一剪</strong><p>选中剪刀，按住拖动圈出一个区域，松开即剪去。也可逐点点击，按回车闭合裁剪。剪过纸边，可以改变轮廓；剪在纸内，可以镂空。</p></li><li><strong>展一展</strong><p>点击展开，看看你的剪纸。还可以收起继续剪，或保存透明背景的图片。</p></li></ol><p class="dialog-tip">剪错了也没关系，撤销即可。花样按钮会替换当前作品。</p><button id="help-done" class="primary-button">开始我的剪纸</button></dialog>
+<script type="module" src="app.js"></script>
+</body>
+</html>
