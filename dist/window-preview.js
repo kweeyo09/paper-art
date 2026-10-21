@@ -14,13 +14,19 @@ export function createWindowPreview(renderArt) {
   let light='sunlight',x=73,y=58,size=62,drag=null,previousScroll=0;
   let scene3D=null,loading3D=null,gardenImages=null;
   const angleInput=document.querySelector('#window-angle');
+  const motionButton=document.querySelector('#window-motion');
+  const motionPreference=matchMedia('(prefers-reduced-motion: reduce)');
+  let motionEnabled=!motionPreference.matches;
+  function updateMotion(){motionButton.setAttribute('aria-pressed',String(motionEnabled));motionButton.textContent=t(motionEnabled?'暂停微风':'开启微风');stage.dataset.motion=String(motionEnabled);scene3D?.setMotion(motionEnabled);}
+  motionButton.addEventListener('click',()=>{motionEnabled=!motionEnabled;updateMotion();});
+  motionPreference.addEventListener('change',()=>{motionEnabled=!motionPreference.matches;updateMotion();});updateMotion();
   async function load3D(){
     if(scene3D){scene3D.refresh();scene3D.start();return;}
     if(loading3D)return loading3D;
     document.querySelector('#window-render-status').textContent=t('正在准备三维光影…');
     loading3D=import('./window-3d.js').then(async ({createWindow3D})=>{
       scene3D=await createWindow3D(stage,art,(nextX,nextY)=>{x=nextX;y=nextY;position();});
-      scene3D.setLight(light);scene3D.setAngle(+angleInput.value);position();scene3D.refresh();
+      scene3D.setLight(light);scene3D.setAngle(+angleInput.value);updateMotion();position();scene3D.refresh();
       await scene3D.prepare();
       if(!panel.hidden)scene3D.start();
       document.querySelector('#window-render-status').textContent=t('三维实景 · 拖动剪纸或调整视角');

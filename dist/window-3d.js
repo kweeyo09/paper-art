@@ -16,7 +16,7 @@ export async function createWindow3D(stage, artwork, onMove) {
   const scene=new THREE.Scene();
   const camera=new THREE.PerspectiveCamera(43,1,.1,90);
   const room=new THREE.Group();scene.add(room);
-  let active=false,mode='sunlight',angle=9,raf=0,drag=null,disposed=false;
+  let active=false,mode='sunlight',angle=9,raf=0,drag=null,disposed=false,inView=true,motionEnabled=true,dirty=true;
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
   let seed=2718;
   function random(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;}
@@ -68,6 +68,28 @@ export async function createWindow3D(stage, artwork, onMove) {
     texture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());texture.needsUpdate=true;return [key,texture];
   }));
   const gardenMaterial=new THREE.MeshBasicMaterial({map:gardenTextures.sunlight,toneMapped:false,fog:false});
+  const breeze={time:{value:0},strength:{value:1}};
+  gardenMaterial.onBeforeCompile=shader=>{
+    shader.uniforms.breezeTime=breeze.time;shader.uniforms.breezeStrength=breeze.strength;
+    shader.fragmentShader='uniform float breezeTime;\nuniform float breezeStrength;\n'+shader.fragmentShader;
+    shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`
+      #ifdef USE_MAP
+        vec2 uv=vMapUv;
+        float canopy=(1.0-smoothstep(0.30,0.46,uv.x))*smoothstep(0.52,0.72,uv.y);
+        float upperLeaves=smoothstep(0.86,0.98,uv.y);
+        float bamboo=smoothstep(0.78,0.94,uv.x)*smoothstep(0.15,0.40,uv.y);
+        float shrubs=(1.0-smoothstep(0.18,0.32,uv.x))*smoothstep(0.18,0.30,uv.y)*(1.0-smoothstep(0.48,0.60,uv.y));
+        float plants=max(max(canopy,upperLeaves),max(bamboo,shrubs));
+        float gust=0.65+0.35*sin(breezeTime*0.37);
+        float sway=sin(breezeTime*1.25+uv.y*5.0)+0.25*sin(breezeTime*2.1+uv.x*8.0);
+        vec2 offset=vec2(sway*0.0045,sin(breezeTime*1.1+uv.x*9.0)*0.0012);
+        offset+=vec2(sin(breezeTime*3.0+uv.y*90.0)*0.00035,0.0);
+        uv+=offset*plants*gust*breezeStrength;
+        diffuseColor*=texture2D(map,clamp(uv,0.001,0.999));
+      #endif
+    `);
+  };
+  gardenMaterial.customProgramCacheKey=()=> 'garden-breeze-v1';
   const garden=new THREE.Mesh(new THREE.PlaneGeometry(14,28/3),gardenMaterial);
   garden.position.set(0,0,-5);scene.add(garden);
   const snowPositions=new Float32Array(600*3);
@@ -101,16 +123,23 @@ export async function createWindow3D(stage, artwork, onMove) {
   renderer.domElement.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId||!locate(e))return;onMove(((hit.x+drag.dx)/4.3+.5)*100,(.5-(hit.y+drag.dy)/3.2)*100);});
   function stopDrag(){drag=null;renderer.domElement.style.cursor='grab';}renderer.domElement.addEventListener('pointerup',stopDrag);renderer.domElement.addEventListener('pointercancel',stopDrag);renderer.domElement.addEventListener('lostpointercapture',stopDrag);
   let last=0;
-  function frame(now){raf=0;if(!active||disposed||document.hidden)return;const dt=Math.min((now-last)/1000,.05);last=now;
-    if(mode==='snow'&&!reduced.matches){for(let i=0;i<snowPositions.length;i+=3){snowPositions[i+1]-=dt*(.35+(i%7)*.07);snowPositions[i]+=Math.sin(now*.0003+i)*dt*.06;if(snowPositions[i+1]<-3)snowPositions[i+1]=6;}snowGeometry.attributes.position.needsUpdate=true;}
-    renderer.render(scene,camera);if(mode==='snow'&&!reduced.matches)raf=requestAnimationFrame(frame);
+  function frame(now){raf=0;if(!active||disposed||document.hidden||!inView)return;
+    const moving=motionEnabled;
+    if(!dirty&&moving&&now-last<1000/30){raf=requestAnimationFrame(frame);return;}
+    const dt=Math.min((now-last)/1000,.05);last=now;dirty=false;
+    if(moving)breeze.time.value+=dt;
+    breeze.strength.value=mode==='snow'?.6:1;
+    if(mode==='snow'&&moving){for(let i=0;i<snowPositions.length;i+=3){snowPositions[i+1]-=dt*(.35+(i%7)*.07);snowPositions[i]+=Math.sin(breeze.time.value*.3+i)*dt*.06;if(snowPositions[i+1]<-3)snowPositions[i+1]=6;}snowGeometry.attributes.position.needsUpdate=true;}
+    renderer.render(scene,camera);if(moving)raf=requestAnimationFrame(frame);
   }
-  function requestRender(){if(active&&!raf&&!disposed)raf=requestAnimationFrame(frame);}
+  function requestRender(){dirty=true;if(active&&!raf&&!disposed)raf=requestAnimationFrame(frame);}
+  function setMotion(enabled){motionEnabled=enabled;last=performance.now();requestRender();}
+  const visibilityObserver=new IntersectionObserver(entries=>{inView=entries[0].isIntersecting;last=performance.now();requestRender();});visibilityObserver.observe(stage);
   const observer=new ResizeObserver(resize);observer.observe(stage);
   reduced.addEventListener('change',requestRender);
   document.addEventListener('visibilitychange',requestRender);
   renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();active=false;cancelAnimationFrame(raf);raf=0;stage.classList.remove('has-3d');stage.dispatchEvent(new Event('previewfallback'));});
   renderer.domElement.addEventListener('webglcontextrestored',()=>{stage.classList.add('has-3d');active=!document.querySelector('#window-preview').hidden;paperTexture.needsUpdate=true;requestRender();});
   stage.append(renderer.domElement);stage.classList.add('has-3d');
-  return {setLight,setPlacement,setAngle,async prepare(){resize();await renderer.compileAsync(scene,camera);},refresh(){paperTexture.needsUpdate=true;renderer.shadowMap.needsUpdate=true;requestRender();},start(){active=true;last=performance.now();resize();requestRender();},stop(){active=false;drag=null;cancelAnimationFrame(raf);raf=0;},dispose(){disposed=true;observer.disconnect();reduced.removeEventListener('change',requestRender);document.removeEventListener('visibilitychange',requestRender);cancelAnimationFrame(raf);scene.traverse(obj=>{obj.geometry?.dispose();if(obj.material){for(const mat of Array.isArray(obj.material)?obj.material:[obj.material])mat.dispose();}});woodMap.dispose();plasterMap.dispose();paperTexture.dispose();for(const texture of Object.values(gardenTextures))texture.dispose();for(const env of environments.values())env.dispose();renderer.dispose();renderer.domElement.remove();}};
+  return {setLight,setPlacement,setAngle,setMotion,async prepare(){resize();await renderer.compileAsync(scene,camera);},refresh(){paperTexture.needsUpdate=true;renderer.shadowMap.needsUpdate=true;requestRender();},start(){active=true;last=performance.now();resize();requestRender();},stop(){active=false;drag=null;cancelAnimationFrame(raf);raf=0;},dispose(){disposed=true;observer.disconnect();visibilityObserver.disconnect();reduced.removeEventListener('change',requestRender);document.removeEventListener('visibilitychange',requestRender);cancelAnimationFrame(raf);scene.traverse(obj=>{obj.geometry?.dispose();if(obj.material){for(const mat of Array.isArray(obj.material)?obj.material:[obj.material])mat.dispose();}});woodMap.dispose();plasterMap.dispose();paperTexture.dispose();for(const texture of Object.values(gardenTextures))texture.dispose();for(const env of environments.values())env.dispose();renderer.dispose();renderer.domElement.remove();}};
 }

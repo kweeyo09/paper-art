@@ -4,7 +4,7 @@ const translations = new Map([
   ['三维实景 · 拖动剪纸或调整视角', '3D window · Drag your cutting or change the viewing angle'],
   ['此设备暂不支持三维，已显示平面预览', '3D is unavailable on this device. Showing the flat preview.'],
   ['贴上窗，看看光影', 'Try it on a window'],
-  ['回到剪纸台', 'Back to the studio'], ['纸映窗间', 'Paper, glass & light'], ['窗模型', 'Window model'],
+  ['回到剪纸台', 'Back to the studio'], ['纸映窗间', 'Paper, glass & light'], ['窗模型', 'Window model'], ['暂停微风', 'Pause breeze'], ['开启微风', 'Resume breeze'],
   ['把心意贴上窗，让光穿过你的剪纸。', 'Place your artwork on the glass and let the light through.'],
   ['选择窗外光线', 'Choose the light outside'], ['阳光', 'Sunlight'], ['雪景', 'Snow'], ['暖色晨曦', 'Warm dawn'],
   ['窗上的剪纸，可拖动或使用方向键移动', 'Your paper cutting on the window. Drag or use arrow keys to move it.'],
