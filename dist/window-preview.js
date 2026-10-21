@@ -1,39 +1,42 @@
 import {t, translateDocument} from './i18n.js';
 
 const palettes = {
-  morning: {sky:['#b1cbd1','#e6e6d2','#f3dfb4'], sun:'#fff3c7',sunX:.76,sunY:.29,hills:['#a7b5ac','#819b90','#587b6c'],wood:['#72604b','#3e332a','#897058'],glow:'#ffe9aa',caption:'晨光轻透，纸上的每一处留白都醒了。'},
+  sunlight: {sky:['#b1cbd1','#e6e6d2','#f3dfb4'], sun:'#fff3c7',sunX:.76,sunY:.29,hills:['#a7b5ac','#819b90','#587b6c'],wood:['#72604b','#3e332a','#897058'],glow:'#ffe9aa',caption:'阳光穿过窗，照亮剪纸的每一处细节。'},
   snow: {sky:['#bac8d1','#e1e6e8','#f0f0e9'],sun:'#ffffff',sunX:.34,sunY:.22,hills:['#c0cdd0','#a1b2b8','#788d93'],wood:['#635e58','#343536','#79746b'],glow:'#eaf5ff',caption:'雪落无声，一抹纸色暖了整扇窗。'},
-  sunset: {sky:['#b98682','#e9ac83','#f7d494'],sun:'#ffedbc',sunX:.73,sunY:.62,hills:['#b48c83','#896f70','#55565c'],wood:['#83583e','#382e29','#a0774b'],glow:'#ffbc6c',caption:'夕阳把窗染成蜜色，也把剪纸照得温柔。'},
+  dawn: {sky:['#b98682','#e9ac83','#f7d494'],sun:'#ffedbc',sunX:.73,sunY:.62,hills:['#b48c83','#896f70','#55565c'],wood:['#83583e','#382e29','#a0774b'],glow:'#ffbc6c',caption:'黎明的暖光，轻轻染上窗与纸。'},
 };
 
 export function createWindowPreview(renderArt) {
   const panel=document.querySelector('#window-preview'),stage=document.querySelector('#window-scene');
   const glass=document.querySelector('#window-glass'),art=document.querySelector('#window-art');
   const landscape=document.querySelector('#window-landscape'),sizeInput=document.querySelector('#window-size');
-  let light='morning',x=50,y=58,size=62,drag=null,previousScroll=0;
+  let light='sunlight',x=73,y=58,size=62,drag=null,previousScroll=0;
   let scene3D=null,loading3D=null;
   const angleInput=document.querySelector('#window-angle');
   async function load3D(){
     if(scene3D){scene3D.refresh();scene3D.start();return;}
     if(loading3D)return loading3D;
     document.querySelector('#window-render-status').textContent=t('正在准备三维光影…');
-    loading3D=import('./window-3d.js').then(({createWindow3D})=>{
-      scene3D=createWindow3D(stage,art,(nextX,nextY)=>{x=nextX;y=nextY;position();});
+    loading3D=import('./window-3d.js').then(async ({createWindow3D})=>{
+      scene3D=await createWindow3D(stage,art,(nextX,nextY)=>{x=nextX;y=nextY;position();});
       scene3D.setLight(light);scene3D.setAngle(+angleInput.value);position();scene3D.refresh();
+      await scene3D.prepare();
       if(!panel.hidden)scene3D.start();
       document.querySelector('#window-render-status').textContent=t('三维实景 · 拖动剪纸或调整视角');
       document.querySelector('.window-camera').hidden=false;
     }).catch(error=>{
       console.warn('3D window unavailable; keeping the 2D preview.',error);
+      scene3D?.dispose();scene3D=null;
       document.querySelector('#window-render-status').textContent=t('此设备暂不支持三维，已显示平面预览');
       stage.classList.remove('has-3d');
-    });
+    }).finally(()=>{loading3D=null;});
     return loading3D;
   }
   angleInput.addEventListener('input',()=>{document.querySelector('#window-angle-value').value=`${angleInput.value}°`;scene3D?.setAngle(+angleInput.value);});
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 
   function position(){
+    if(scene3D&&stage.classList.contains('has-3d')){x=clamp(x,0,100);y=clamp(y,0,100);scene3D.setPlacement(x,y,size);return;}
     const rect=glass.getBoundingClientRect();
     // Keep the whole square artwork within the glass, even on narrow screens.
     const side=Math.min(rect.width,rect.height)*size/100;
@@ -48,7 +51,7 @@ export function createWindowPreview(renderArt) {
     const sky=c.createLinearGradient(0,0,0,h);p.sky.forEach((v,i)=>sky.addColorStop(i/2,v));c.fillStyle=sky;c.fillRect(0,0,w,h);
     const sx=w*p.sunX,sy=h*p.sunY;
     const halo=c.createRadialGradient(sx,sy,12,sx,sy,w*.42);halo.addColorStop(0,p.sun+'d9');halo.addColorStop(.28,p.sun+'66');halo.addColorStop(1,p.sun+'00');c.fillStyle=halo;c.fillRect(0,0,w,h);
-    c.fillStyle=p.sun;c.beginPath();c.arc(sx,sy,light==='sunset'?49:31,0,Math.PI*2);c.fill();
+    c.fillStyle=p.sun;c.beginPath();c.arc(sx,sy,light==='dawn'?49:31,0,Math.PI*2);c.fill();
     // Soft, layered landscape forms stay deliberately out of focus behind the glass.
     c.save();c.filter='blur(5px)';
     p.hills.forEach((tint,layer)=>{
@@ -74,13 +77,13 @@ export function createWindowPreview(renderArt) {
   document.querySelector('#window-back').addEventListener('click',close);
   document.addEventListener('keydown',e=>{if(!panel.hidden&&!document.querySelector('#help-dialog').open&&e.key==='Escape'){e.preventDefault();close();}});
   sizeInput.addEventListener('input',()=>{size=+sizeInput.value;document.querySelector('#window-size-value').value=`${size}%`;position();});
-  document.querySelector('#window-center').addEventListener('click',()=>{x=50;y=58;position();});
+  document.querySelector('#window-center').addEventListener('click',()=>{x=73;y=58;position();});
   art.addEventListener('pointerdown',e=>{if(e.button!==0)return;e.preventDefault();art.focus({preventScroll:true});art.setPointerCapture(e.pointerId);drag={id:e.pointerId,startX:e.clientX,startY:e.clientY,x,y};art.classList.add('dragging');});
   art.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;const r=glass.getBoundingClientRect();x=drag.x+(e.clientX-drag.startX)/r.width*100;y=drag.y+(e.clientY-drag.startY)/r.height*100;position();});
   function endDrag(){drag=null;art.classList.remove('dragging');}
   art.addEventListener('pointerup',endDrag);art.addEventListener('pointercancel',endDrag);art.addEventListener('lostpointercapture',endDrag);
   art.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();const step=e.shiftKey?5:1;if(e.key==='ArrowLeft')x-=step;if(e.key==='ArrowRight')x+=step;if(e.key==='ArrowUp')y-=step;if(e.key==='ArrowDown')y+=step;position();});
   new ResizeObserver(()=>{if(!panel.hidden)position();}).observe(glass);
-  stage.addEventListener('previewfallback',()=>{document.querySelector('#window-render-status').textContent=t('此设备暂不支持三维，已显示平面预览');document.querySelector('.window-camera').hidden=true;});
+  stage.addEventListener('previewfallback',()=>{document.querySelector('#window-render-status').textContent=t('此设备暂不支持三维，已显示平面预览');document.querySelector('.window-camera').hidden=true;position();});
   return {open(){previousScroll=window.scrollY;renderArt(art);panel.hidden=false;document.body.classList.add('window-view');chooseLight(light);position();translateDocument();window.scrollTo({top:0,behavior:'instant'});document.querySelector('#window-heading').focus({preventScroll:true});load3D();}};
 }

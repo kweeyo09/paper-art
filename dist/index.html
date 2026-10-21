@@ -73,11 +73,11 @@
     </section>
     <section id="window-preview" class="window-preview" hidden aria-labelledby="window-heading">
       <div class="window-heading-row"><div><button id="window-back" class="text-button"><svg class="back-arrow"><use href="#i-arrow"/></svg><span>回到剪纸台</span></button><h2 id="window-heading" tabindex="-1">纸映窗间</h2><p>把心意贴上窗，让光穿过你的剪纸。</p></div><div class="light-options" role="group" aria-label="选择窗外光线">
-        <button data-light="morning" aria-pressed="true"><span class="light-dot morning-dot"></span><span>晨光</span></button>
+        <button data-light="sunlight" aria-pressed="true"><span class="light-dot sunlight-dot"></span><span>阳光</span></button>
         <button data-light="snow" aria-pressed="false"><span class="light-dot snow-dot"></span><span>雪景</span></button>
-        <button data-light="sunset" aria-pressed="false"><span class="light-dot sunset-dot"></span><span>暖阳落日</span></button>
+        <button data-light="dawn" aria-pressed="false"><span class="light-dot dawn-dot"></span><span>暖色晨曦</span></button>
       </div></div>
-      <div class="window-scene" id="window-scene" data-light="morning">
+      <div class="window-scene" id="window-scene" data-light="sunlight">
         <canvas id="window-landscape" width="1600" height="1000" aria-hidden="true"></canvas>
         <div class="window-glass" id="window-glass"><div class="glass-reflection" aria-hidden="true"></div><div class="snowfall" id="snowfall" aria-hidden="true"></div><canvas id="window-art" width="1200" height="1200" role="img" tabindex="0" aria-label="窗上的剪纸，可拖动或使用方向键移动"></canvas></div>
         <div class="window-frame" aria-hidden="true"><span class="frame-top"></span><span class="frame-bottom"></span><span class="frame-left"></span><span class="frame-right"></span><span class="frame-rail rail-left"></span><span class="frame-rail rail-right"></span><span class="frame-crossbar"></span></div>
@@ -86,7 +86,8 @@
       <div class="window-controls"><p><svg><use href="#i-window"/></svg><span>拖动剪纸，找到喜欢的位置；方向键也能移动。</span></p><div class="window-sizing"><label for="window-size">剪纸大小</label><input id="window-size" type="range" min="25" max="90" value="62"><output id="window-size-value" for="window-size">62%</output><button id="window-center" class="text-button">重新居中</button></div></div>
       <div class="window-camera" hidden><label for="window-angle">观察角度</label><input id="window-angle" type="range" min="-25" max="25" value="9"><output id="window-angle-value" for="window-angle">9°</output></div>
       <p id="window-render-status" class="render-status" role="status"></p>
-      <p class="window-caption" id="window-caption" role="status">晨光轻透，纸上的每一处留白都醒了。</p>
+      <p class="window-caption" id="window-caption" role="status">阳光穿过窗，照亮剪纸的每一处细节。</p>
+      <p class="model-credit"><span>窗模型</span> · <a href="https://sketchfab.com/3d-models/window--wooden-8-mb-ef344b45b2ce42ef9f96c0d7fdf3c560" target="_blank" rel="noopener">Mehdi Shahsavan</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></p>
     </section>
     <div class="below-studio"><p><span class="tiny-seal">心</span> 剪去的是纸，留下的是心意。</p><div class="draft-controls"><button id="resume-draft" class="text-button" hidden>继续上次的剪纸</button><span id="save-status">作品仅保存在此浏览器</span></div></div>
   </main>
