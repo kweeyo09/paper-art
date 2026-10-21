@@ -1,4 +1,5 @@
 import {t, translateDocument} from './i18n.js';
+import {getGardenImages} from './scenery.js';
 
 const palettes = {
   sunlight: {sky:['#b1cbd1','#e6e6d2','#f3dfb4'], sun:'#fff3c7',sunX:.76,sunY:.29,hills:['#a7b5ac','#819b90','#587b6c'],wood:['#72604b','#3e332a','#897058'],glow:'#ffe9aa',caption:'阳光穿过窗，照亮剪纸的每一处细节。'},
@@ -11,7 +12,7 @@ export function createWindowPreview(renderArt) {
   const glass=document.querySelector('#window-glass'),art=document.querySelector('#window-art');
   const landscape=document.querySelector('#window-landscape'),sizeInput=document.querySelector('#window-size');
   let light='sunlight',x=73,y=58,size=62,drag=null,previousScroll=0;
-  let scene3D=null,loading3D=null;
+  let scene3D=null,loading3D=null,gardenImages=null;
   const angleInput=document.querySelector('#window-angle');
   async function load3D(){
     if(scene3D){scene3D.refresh();scene3D.start();return;}
@@ -67,6 +68,7 @@ export function createWindowPreview(renderArt) {
     for(let i=0;i<7;i++){const bx=w*(.02+i*.025);c.lineWidth=5-i*.4;c.beginPath();c.moveTo(bx,h);c.bezierCurveTo(bx+25,h*.8,bx-30,h*.6,bx+60,h*(.33+i*.055));c.stroke();for(let j=0;j<4;j++){const yy=h*(.51+j*.09);c.beginPath();c.moveTo(bx+10,yy);c.lineTo(bx+(j%2?65:-45),yy-50);c.stroke();}}
     c.restore();
     const haze=c.createLinearGradient(0,h*.4,0,h);haze.addColorStop(0,p.sky[1]+'00');haze.addColorStop(1,p.sky[1]+'3b');c.fillStyle=haze;c.fillRect(0,0,w,h);
+    if(gardenImages){const image=gardenImages[light],scale=Math.max(w/image.width,h/image.height);c.drawImage(image,(w-image.width*scale)/2,(h-image.height*scale)/2,image.width*scale,image.height*scale);}
     stage.style.setProperty('--wood-light',p.wood[0]);stage.style.setProperty('--wood-dark',p.wood[1]);stage.style.setProperty('--wood-edge',p.wood[2]);stage.style.setProperty('--window-glow',p.glow);
   }
   function chooseLight(value){light=value;stage.dataset.light=value;document.querySelectorAll('[data-light]').forEach(b=>{if(b.tagName==='BUTTON')b.setAttribute('aria-pressed',String(b.dataset.light===light));});document.querySelector('#window-caption').textContent=t(palettes[value].caption);drawLandscape();scene3D?.setLight(value);}
@@ -85,5 +87,5 @@ export function createWindowPreview(renderArt) {
   art.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();const step=e.shiftKey?5:1;if(e.key==='ArrowLeft')x-=step;if(e.key==='ArrowRight')x+=step;if(e.key==='ArrowUp')y-=step;if(e.key==='ArrowDown')y+=step;position();});
   new ResizeObserver(()=>{if(!panel.hidden)position();}).observe(glass);
   stage.addEventListener('previewfallback',()=>{document.querySelector('#window-render-status').textContent=t('此设备暂不支持三维，已显示平面预览');document.querySelector('.window-camera').hidden=true;position();});
-  return {open(){previousScroll=window.scrollY;renderArt(art);panel.hidden=false;document.body.classList.add('window-view');chooseLight(light);position();translateDocument();window.scrollTo({top:0,behavior:'instant'});document.querySelector('#window-heading').focus({preventScroll:true});load3D();}};
+  return {open(){previousScroll=window.scrollY;renderArt(art);panel.hidden=false;document.body.classList.add('window-view');chooseLight(light);getGardenImages().then(images=>{gardenImages=images;drawLandscape();}).catch(()=>{});position();translateDocument();window.scrollTo({top:0,behavior:'instant'});document.querySelector('#window-heading').focus({preventScroll:true});load3D();}};
 }

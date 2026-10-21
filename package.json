@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node serve.cjs",
-    "check": "node --check dist/app.js && node --check dist/i18n.js && node --check dist/window-preview.js && node --check dist/window-3d.js",
+    "check": "node --check dist/app.js && node --check dist/i18n.js && node --check dist/window-preview.js && node --check dist/window-3d.js && node --check dist/scenery.js",
+    "validate": "node scripts/validate.mjs",
     "vendor": "node scripts/vendor.mjs"
   },
   "dependencies": {"three": "0.180.0"}

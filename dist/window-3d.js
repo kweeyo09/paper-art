@@ -1,9 +1,10 @@
 import * as THREE from './vendor/three.module.js';
 import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
+import { getGardenImages } from './scenery.js';
 
 // The supplied model and its embedded textures are served from the same origin.
 export async function createWindow3D(stage, artwork, onMove) {
-  const {scene:model}=await new GLTFLoader().loadAsync(new URL('./models/wooden-window.glb',import.meta.url).href);
+  const [{scene:model},gardenImages]=await Promise.all([new GLTFLoader().loadAsync(new URL('./models/wooden-window.glb',import.meta.url).href),getGardenImages()]);
   const renderer = new THREE.WebGLRenderer({antialias:true,alpha:false});
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.7));
   renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -62,22 +63,15 @@ export async function createWindow3D(stage, artwork, onMove) {
   const skyFill=new THREE.HemisphereLight(0xcde8ff,0x716049,2.3);scene.add(skyFill);
   const interiorFill=new THREE.DirectionalLight(0xffecd2,.65);interiorFill.position.set(0,2,6);scene.add(interiorFill);
   const sun=new THREE.DirectionalLight(0xffe7b8,3.7);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-5;sun.shadow.camera.right=5;sun.shadow.camera.top=5;sun.shadow.camera.bottom=-5;sun.shadow.camera.near=.1;sun.shadow.camera.far=30;sun.shadow.normalBias=.015;sun.shadow.bias=-.00015;sun.shadow.radius=3;sun.target.position.set(0,-1,2);scene.add(sun,sun.target);
-  const garden=new THREE.Group();scene.add(garden);
-  const groundMaterial=new THREE.MeshStandardMaterial({color:0x809170,roughness:1});
-  const ground=new THREE.Mesh(new THREE.PlaneGeometry(70,60),groundMaterial);ground.rotation.x=-Math.PI/2;ground.position.set(0,-2.65,-31);ground.receiveShadow=true;garden.add(ground);
-  const foliage=new THREE.MeshStandardMaterial({color:0x536b45,roughness:1});
-  const trunk=new THREE.MeshStandardMaterial({color:0x685743,roughness:1});
-  const stems=new THREE.InstancedMesh(new THREE.CylinderGeometry(.035,.09,1,7),trunk,34);
-  const crowns=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,2),foliage,102);
-  const treeTransform=new THREE.Object3D();
-  for(let i=0;i<34;i++){
-    const tx=(random()-.5)*36,tz=-7-random()*25,height=2.4+random()*4;
-    treeTransform.position.set(tx,-2.6+height/2,tz);treeTransform.scale.set(1,height,1);treeTransform.updateMatrix();stems.setMatrixAt(i,treeTransform.matrix);
-    for(let j=0;j<3;j++){const radius=.8+random()*.6;treeTransform.position.set(tx+(random()-.5)*.7,-2.4+height-j*.55,tz);treeTransform.scale.set(radius,radius*(1.1+random()*.4),radius);treeTransform.updateMatrix();crowns.setMatrixAt(i*3+j,treeTransform.matrix);}
-  }
-  garden.add(stems,crowns);
+  const gardenTextures=Object.fromEntries(Object.entries(gardenImages).map(([key,image])=>{
+    const texture=new THREE.Texture(image);texture.colorSpace=THREE.SRGBColorSpace;
+    texture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());texture.needsUpdate=true;return [key,texture];
+  }));
+  const gardenMaterial=new THREE.MeshBasicMaterial({map:gardenTextures.sunlight,toneMapped:false,fog:false});
+  const garden=new THREE.Mesh(new THREE.PlaneGeometry(14,28/3),gardenMaterial);
+  garden.position.set(0,0,-5);scene.add(garden);
   const snowPositions=new Float32Array(600*3);
-  for(let i=0;i<snowPositions.length;i+=3){snowPositions[i]=(random()-.5)*14;snowPositions[i+1]=random()*10-3;snowPositions[i+2]=-1.5-random()*12;}
+  for(let i=0;i<snowPositions.length;i+=3){snowPositions[i]=(random()-.5)*14;snowPositions[i+1]=random()*10-3;snowPositions[i+2]=-.7-random()*4;}
   const snowGeometry=new THREE.BufferGeometry();snowGeometry.setAttribute('position',new THREE.BufferAttribute(snowPositions,3));
   const flakeCanvas=document.createElement('canvas');flakeCanvas.width=flakeCanvas.height=32;const fc=flakeCanvas.getContext('2d');const fg=fc.createRadialGradient(16,16,1,16,16,15);fg.addColorStop(0,'#ffffffff');fg.addColorStop(.4,'#ffffffdd');fg.addColorStop(1,'#ffffff00');fc.fillStyle=fg;fc.fillRect(0,0,32,32);
   const flakes=new THREE.Points(snowGeometry,new THREE.PointsMaterial({color:0xffffff,size:.14,map:new THREE.CanvasTexture(flakeCanvas),transparent:true,opacity:1,depthWrite:false,toneMapped:false,fog:false}));scene.add(flakes);
@@ -87,7 +81,7 @@ export async function createWindow3D(stage, artwork, onMove) {
     mode=value;const winter=value==='snow',dawn=value==='dawn';
     const sky=winter?0xaebfcc:dawn?0xe7b185:0xc9dce1;
     scene.background=new THREE.Color(sky);scene.fog=new THREE.Fog(sky,8,winter?28:45);
-    groundMaterial.color.set(winter?0xe9eef0:dawn?0x827353:0x809170);foliage.color.set(winter?0x899c9c:dawn?0x5e6550:0x536b45);
+    gardenMaterial.map=gardenTextures[value];
     sun.color.set(winter?0xe6f0ff:dawn?0xffae60:0xffe1aa);sun.intensity=winter?1.4:dawn?4.4:3.7;
     sun.position.set(dawn?5:-4,dawn?1.8:7,-6);skyFill.color.set(winter?0xd8eaff:dawn?0xe5b5a1:0xcde8ff);skyFill.intensity=winter?2.7:dawn?1.2:2.2;
     interiorFill.intensity=winter?.75:dawn?.5:.65;paperMaterial.emissiveIntensity=dawn?.25:.16;
@@ -118,5 +112,5 @@ export async function createWindow3D(stage, artwork, onMove) {
   renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();active=false;cancelAnimationFrame(raf);raf=0;stage.classList.remove('has-3d');stage.dispatchEvent(new Event('previewfallback'));});
   renderer.domElement.addEventListener('webglcontextrestored',()=>{stage.classList.add('has-3d');active=!document.querySelector('#window-preview').hidden;paperTexture.needsUpdate=true;requestRender();});
   stage.append(renderer.domElement);stage.classList.add('has-3d');
-  return {setLight,setPlacement,setAngle,async prepare(){resize();await renderer.compileAsync(scene,camera);},refresh(){paperTexture.needsUpdate=true;renderer.shadowMap.needsUpdate=true;requestRender();},start(){active=true;last=performance.now();resize();requestRender();},stop(){active=false;drag=null;cancelAnimationFrame(raf);raf=0;},dispose(){disposed=true;observer.disconnect();reduced.removeEventListener('change',requestRender);document.removeEventListener('visibilitychange',requestRender);cancelAnimationFrame(raf);scene.traverse(obj=>{obj.geometry?.dispose();if(obj.material){for(const mat of Array.isArray(obj.material)?obj.material:[obj.material])mat.dispose();}});woodMap.dispose();plasterMap.dispose();paperTexture.dispose();for(const env of environments.values())env.dispose();renderer.dispose();renderer.domElement.remove();}};
+  return {setLight,setPlacement,setAngle,async prepare(){resize();await renderer.compileAsync(scene,camera);},refresh(){paperTexture.needsUpdate=true;renderer.shadowMap.needsUpdate=true;requestRender();},start(){active=true;last=performance.now();resize();requestRender();},stop(){active=false;drag=null;cancelAnimationFrame(raf);raf=0;},dispose(){disposed=true;observer.disconnect();reduced.removeEventListener('change',requestRender);document.removeEventListener('visibilitychange',requestRender);cancelAnimationFrame(raf);scene.traverse(obj=>{obj.geometry?.dispose();if(obj.material){for(const mat of Array.isArray(obj.material)?obj.material:[obj.material])mat.dispose();}});woodMap.dispose();plasterMap.dispose();paperTexture.dispose();for(const texture of Object.values(gardenTextures))texture.dispose();for(const env of environments.values())env.dispose();renderer.dispose();renderer.domElement.remove();}};
 }
