@@ -121,6 +121,9 @@ function unfold(){
   if(animating)return;polygon=[];active=null;revealed=true;animating=true;$('.work-area').classList.add('revealed');
   $('.work-bottom').innerHTML='<p>方寸红纸，展开便是满眼风华。</p><div class="reveal-actions"><button id="fold-back" class="secondary-button"><svg><use href="#i-open"/></svg>收起继续剪</button><button id="download" class="primary-button"><svg><use href="#i-download"/></svg>保存我的剪纸</button></div><button id="try-window" class="window-preview-button"><svg><use href="#i-window"/></svg><span>贴上窗，看看光影</span><svg><use href="#i-arrow"/></svg></button>';
   $('#try-window').addEventListener('click',()=>windowPreview.open());
+  // Start building the 3D window once the unfold settles, so the preview opens without a wait.
+  $('#try-window').addEventListener('pointerenter',windowPreview.warm);$('#try-window').addEventListener('focus',windowPreview.warm);
+  setTimeout(windowPreview.warm,(reducedMotion.matches?0:1100)+200);
   $('#fold-back').addEventListener('click',foldBack);$('#download').addEventListener('click',download);
   update();const start=performance.now(),duration=reducedMotion.matches?0:1100;
   const tick=time=>{const t=duration?Math.min((time-start)/duration,1):1;revealProgress=1-Math.pow(1-t,4);draw();if(t<1)animationFrame=requestAnimationFrame(tick);else{animating=false;update();if($('#window-preview').hidden)$('#fold-back').focus({preventScroll:true});}};

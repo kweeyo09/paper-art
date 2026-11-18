@@ -3,10 +3,16 @@ import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
 import { getGardenImages } from './scenery.js';
 
 // The supplied model and its embedded textures are served from the same origin.
+let assetsPromise;
+// Fetch and decode the model and garden photos once; the studio calls this ahead of the first click.
+export function preloadWindowAssets(){
+  if(!assetsPromise)assetsPromise=Promise.all([new GLTFLoader().loadAsync(new URL('./models/wooden-window.glb',import.meta.url).href),getGardenImages()]).catch(error=>{assetsPromise=null;throw error;});
+  return assetsPromise;
+}
 export async function createWindow3D(stage, artwork, onMove) {
-  const [{scene:model},gardenImages]=await Promise.all([new GLTFLoader().loadAsync(new URL('./models/wooden-window.glb',import.meta.url).href),getGardenImages()]);
+  const [{scene:model},gardenImages]=await preloadWindowAssets();
   const renderer = new THREE.WebGLRenderer({antialias:true,alpha:false});
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.7));
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
   renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   renderer.shadowMap.autoUpdate=false;
   renderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -48,7 +54,9 @@ export async function createWindow3D(stage, artwork, onMove) {
     mesh.castShadow=!isGlass;mesh.receiveShadow=!isGlass;
     for(const material of materials){
       for(const key of ['map','roughnessMap','metalnessMap','normalMap'])if(material[key])material[key].anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
-      if(isGlass){material.transmission=.65;material.opacity=.22;material.roughness=.12;material.depthWrite=false;material.color.set(0xeaf1ed);}
+      // Plain alpha glass: transmission adds a second render pass per frame and shader variants that
+      // cannot be precompiled, which stalled the first frame by over a second on Windows (ANGLE/D3D).
+      if(isGlass){material.transmission=0;material.transparent=true;material.opacity=.16;material.roughness=.12;material.depthWrite=false;material.color.set(0xeaf1ed);}
       else {material.roughness=.82;material.envMapIntensity=.45;}
     }
   });
@@ -108,11 +116,15 @@ export async function createWindow3D(stage, artwork, onMove) {
     sun.position.set(dawn?5:-4,dawn?1.8:7,-6);skyFill.color.set(winter?0xd8eaff:dawn?0xe5b5a1:0xcde8ff);skyFill.intensity=winter?2.7:dawn?1.2:2.2;
     interiorFill.intensity=winter?.75:dawn?.5:.65;paperMaterial.emissiveIntensity=dawn?.25:.16;
     renderer.toneMappingExposure=winter?1.25:dawn?1.05:1.15;flakes.visible=winter;
-    if(environments.has(value)){scene.environment=environments.get(value).texture;renderer.shadowMap.needsUpdate=true;requestRender();return;}
+    scene.environment=environmentFor(value).texture;renderer.shadowMap.needsUpdate=true;requestRender();
+  }
+  function environmentFor(value){
+    if(environments.has(value))return environments.get(value);
+    const winter=value==='snow',dawn=value==='dawn',sky=winter?0xaebfcc:dawn?0xe7b185:0xc9dce1;
     const envScene=new THREE.Scene();envScene.background=new THREE.Color(sky);
     const dome=new THREE.Mesh(new THREE.SphereGeometry(20,24,12),new THREE.MeshBasicMaterial({color:sky,side:THREE.BackSide}));envScene.add(dome);
     const lightCard=new THREE.Mesh(new THREE.PlaneGeometry(12,9),new THREE.MeshBasicMaterial({color:dawn?0xffdb9b:0xffffff}));lightCard.position.set(-5,4,9);lightCard.lookAt(0,0,0);envScene.add(lightCard);
-    const pmrem=new THREE.PMREMGenerator(renderer);const next=pmrem.fromScene(envScene,.02);scene.environment=next.texture;environments.set(value,next);pmrem.dispose();dome.geometry.dispose();dome.material.dispose();lightCard.geometry.dispose();lightCard.material.dispose();renderer.shadowMap.needsUpdate=true;requestRender();
+    const pmrem=new THREE.PMREMGenerator(renderer);const next=pmrem.fromScene(envScene,.02);environments.set(value,next);pmrem.dispose();dome.geometry.dispose();dome.material.dispose();lightCard.geometry.dispose();lightCard.material.dispose();return next;
   }
   function resize(){const r=stage.getBoundingClientRect();if(!r.width||!r.height)return;renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix();setAngle(angle);}
   function setAngle(degrees){angle=degrees;const distance=Math.max(7.1,2.75/(Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*camera.aspect));const rad=THREE.MathUtils.degToRad(angle);camera.position.set(Math.sin(rad)*distance,.18,Math.cos(rad)*distance);camera.lookAt(0,-.13,0);requestRender();}
@@ -141,5 +153,15 @@ export async function createWindow3D(stage, artwork, onMove) {
   renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();active=false;cancelAnimationFrame(raf);raf=0;stage.classList.remove('has-3d');stage.dispatchEvent(new Event('previewfallback'));});
   renderer.domElement.addEventListener('webglcontextrestored',()=>{stage.classList.add('has-3d');active=!document.querySelector('#window-preview').hidden;paperTexture.needsUpdate=true;requestRender();});
   stage.append(renderer.domElement);stage.classList.add('has-3d');
-  return {setLight,setPlacement,setAngle,setMotion,async prepare(){resize();await renderer.compileAsync(scene,camera);},refresh(){paperTexture.needsUpdate=true;renderer.shadowMap.needsUpdate=true;requestRender();},start(){active=true;last=performance.now();resize();requestRender();},stop(){active=false;drag=null;cancelAnimationFrame(raf);raf=0;},dispose(){disposed=true;observer.disconnect();visibilityObserver.disconnect();reduced.removeEventListener('change',requestRender);document.removeEventListener('visibilitychange',requestRender);cancelAnimationFrame(raf);scene.traverse(obj=>{obj.geometry?.dispose();if(obj.material){for(const mat of Array.isArray(obj.material)?obj.material:[obj.material])mat.dispose();}});woodMap.dispose();plasterMap.dispose();paperTexture.dispose();for(const texture of Object.values(gardenTextures))texture.dispose();for(const env of environments.values())env.dispose();renderer.dispose();renderer.domElement.remove();}};
+  return {setLight,setPlacement,setAngle,setMotion,async prepare(){
+    resize();
+    // Do the one-off GPU work now, not on the first light switch: environments, texture uploads,
+    // and the snow shader (compileAsync skips hidden objects, so show the flakes while compiling).
+    for(const value of ['sunlight','snow','dawn'])environmentFor(value);
+    for(const texture of Object.values(gardenTextures))renderer.initTexture(texture);
+    model.traverse(mesh=>{if(!mesh.isMesh)return;for(const m of Array.isArray(mesh.material)?mesh.material:[mesh.material])for(const key of ['map','roughnessMap','metalnessMap','normalMap'])if(m[key])renderer.initTexture(m[key]);});
+    flakes.visible=true;await renderer.compileAsync(scene,camera);
+    // One hidden render builds the shadow map and its depth shaders before the preview is shown.
+    renderer.shadowMap.needsUpdate=true;renderer.render(scene,camera);flakes.visible=mode==='snow';renderer.shadowMap.needsUpdate=true;
+  },refresh(){paperTexture.needsUpdate=true;renderer.shadowMap.needsUpdate=true;requestRender();},start(){active=true;last=performance.now();resize();requestRender();},stop(){active=false;drag=null;cancelAnimationFrame(raf);raf=0;},dispose(){disposed=true;observer.disconnect();visibilityObserver.disconnect();reduced.removeEventListener('change',requestRender);document.removeEventListener('visibilitychange',requestRender);cancelAnimationFrame(raf);scene.traverse(obj=>{obj.geometry?.dispose();if(obj.material){for(const mat of Array.isArray(obj.material)?obj.material:[obj.material])mat.dispose();}});woodMap.dispose();plasterMap.dispose();paperTexture.dispose();for(const texture of Object.values(gardenTextures))texture.dispose();for(const env of environments.values())env.dispose();renderer.dispose();renderer.domElement.remove();}};
 }

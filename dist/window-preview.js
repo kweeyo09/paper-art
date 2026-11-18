@@ -20,24 +20,33 @@ export function createWindowPreview(renderArt) {
   function updateMotion(){motionButton.setAttribute('aria-pressed',String(motionEnabled));motionButton.textContent=t(motionEnabled?'暂停微风':'开启微风');stage.dataset.motion=String(motionEnabled);scene3D?.setMotion(motionEnabled);}
   motionButton.addEventListener('click',()=>{motionEnabled=!motionEnabled;updateMotion();});
   motionPreference.addEventListener('change',()=>{motionEnabled=!motionPreference.matches;updateMotion();});updateMotion();
-  async function load3D(){
-    if(scene3D){scene3D.refresh();scene3D.start();return;}
+  // Builds the 3D scene once and resolves to it (or null if WebGL is unavailable). warm() runs this in
+  // the background after the unfold, so opening the preview is instant.
+  function load3D(){
+    if(scene3D)return Promise.resolve(scene3D);
     if(loading3D)return loading3D;
     document.querySelector('#window-render-status').textContent=t('正在准备三维光影…');
     loading3D=import('./window-3d.js').then(async ({createWindow3D})=>{
       scene3D=await createWindow3D(stage,art,(nextX,nextY)=>{x=nextX;y=nextY;position();});
       scene3D.setLight(light);scene3D.setAngle(+angleInput.value);updateMotion();position();scene3D.refresh();
       await scene3D.prepare();
-      if(!panel.hidden)scene3D.start();
       document.querySelector('#window-render-status').textContent=t('三维实景 · 拖动剪纸或调整视角');
       document.querySelector('.window-camera').hidden=false;
+      return scene3D;
     }).catch(error=>{
       console.warn('3D window unavailable; keeping the 2D preview.',error);
       scene3D?.dispose();scene3D=null;
       document.querySelector('#window-render-status').textContent=t('此设备暂不支持三维，已显示平面预览');
-      stage.classList.remove('has-3d');
+      stage.classList.remove('has-3d');drawLandscape();
+      return null;
     }).finally(()=>{loading3D=null;});
     return loading3D;
+  }
+  function show3D(){load3D().then(scene=>{if(scene&&!panel.hidden){scene.refresh();scene.start();}});}
+  function warm(){
+    if(scene3D||loading3D||navigator.connection?.saveData)return;
+    const run=()=>{if(!scene3D&&!loading3D)load3D();};
+    'requestIdleCallback' in window?requestIdleCallback(run,{timeout:2000}):setTimeout(run,200);
   }
   angleInput.addEventListener('input',()=>{document.querySelector('#window-angle-value').value=`${angleInput.value}°`;scene3D?.setAngle(+angleInput.value);});
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
@@ -53,6 +62,8 @@ export function createWindowPreview(renderArt) {
     scene3D?.setPlacement(x,y,size);
   }
   function drawLandscape(){
+    // The 2D landscape sits under the WebGL canvas; skip the costly blurred redraw while 3D covers it.
+    if(stage.classList.contains('has-3d'))return;
     const c=landscape.getContext('2d'),w=landscape.width,h=landscape.height,p=palettes[light];
     c.clearRect(0,0,w,h);
     const sky=c.createLinearGradient(0,0,0,h);p.sky.forEach((v,i)=>sky.addColorStop(i/2,v));c.fillStyle=sky;c.fillRect(0,0,w,h);
@@ -92,6 +103,6 @@ export function createWindowPreview(renderArt) {
   art.addEventListener('pointerup',endDrag);art.addEventListener('pointercancel',endDrag);art.addEventListener('lostpointercapture',endDrag);
   art.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();const step=e.shiftKey?5:1;if(e.key==='ArrowLeft')x-=step;if(e.key==='ArrowRight')x+=step;if(e.key==='ArrowUp')y-=step;if(e.key==='ArrowDown')y+=step;position();});
   new ResizeObserver(()=>{if(!panel.hidden)position();}).observe(glass);
-  stage.addEventListener('previewfallback',()=>{document.querySelector('#window-render-status').textContent=t('此设备暂不支持三维，已显示平面预览');document.querySelector('.window-camera').hidden=true;position();});
-  return {open(){previousScroll=window.scrollY;renderArt(art);panel.hidden=false;document.body.classList.add('window-view');chooseLight(light);getGardenImages().then(images=>{gardenImages=images;drawLandscape();}).catch(()=>{});position();translateDocument();window.scrollTo({top:0,behavior:'instant'});document.querySelector('#window-heading').focus({preventScroll:true});load3D();}};
+  stage.addEventListener('previewfallback',()=>{drawLandscape();document.querySelector('#window-render-status').textContent=t('此设备暂不支持三维，已显示平面预览');document.querySelector('.window-camera').hidden=true;position();});
+  return {warm,open(){previousScroll=window.scrollY;renderArt(art);panel.hidden=false;document.body.classList.add('window-view');chooseLight(light);getGardenImages().then(images=>{gardenImages=images;drawLandscape();}).catch(()=>{});position();translateDocument();window.scrollTo({top:0,behavior:'instant'});document.querySelector('#window-heading').focus({preventScroll:true});show3D();}};
 }
