@@ -1,7 +1,7 @@
 const translations = new Map([
   ['继续上次的剪纸', 'Resume saved work'], ['从一张完整的纸开始', 'Start with a fresh sheet'],
   ['观察角度', 'Viewing angle'], ['正在准备三维光影…', 'Preparing the 3D window…'],
-  ['三维实景 · 拖动剪纸或调整视角', '3D window · Drag your cutting or change the viewing angle'],
+  ['三维实景 · 拖动画面空白处可转换视角', '3D window · Drag anywhere else in the scene to turn the view'],
   ['此设备暂不支持三维，已显示平面预览', '3D is unavailable on this device. Showing the flat preview.'],
   ['贴上窗，看看光影', 'Try it on a window'],
   ['回到剪纸台', 'Back to the studio'], ['纸映窗间', 'Paper, glass & light'], ['窗模型', 'Window model'], ['暂停微风', 'Pause breeze'], ['开启微风', 'Resume breeze'],
@@ -70,18 +70,18 @@ const translations = new Map([
 ]);
 const originals = new Map([...translations].map(([zh, en]) => [en.trim(), zh]));
 const textSources = new WeakMap();
-export let language = 'zh';
-try { if (localStorage.getItem('yizhi-language') === 'en') language = 'en'; } catch {}
+// English by default; a visitor's own choice of Chinese is remembered in this browser.
+export let language = 'en';
+try { if (localStorage.getItem('yizhi-language') === 'zh') language = 'zh'; } catch {}
 export function t(zh, en = translations.get(zh) || zh) { return language === 'en' ? en : zh; }
 export function toggleLanguage() {
   language = language === 'zh' ? 'en' : 'zh';
   try { localStorage.setItem('yizhi-language', language); } catch {}
 }
-export function translateDocument() {
-  document.documentElement.lang = language === 'en' ? 'en' : 'zh-CN';
-  document.title = t('一纸生花 · 剪纸工坊', 'Paper in Bloom · Paper-cutting Studio');
-  document.querySelector('meta[name="description"]').content = t('一张红纸，一把剪刀。勾画、裁剪、展开，在指尖创造属于你的中式窗花。', 'Fold, sketch, cut and unfold your own Chinese-inspired paper art.');
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+/** Translates every text node and label inside the studio root; the host page is left untouched. */
+export function translateRoot(root) {
+  root.lang = language === 'en' ? 'en' : 'zh-CN';
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   while (walker.nextNode()) {
     const node = walker.currentNode;
     if (node.parentElement.closest('script, style, .seal, .dialog-seal, #language-toggle')) continue;
@@ -97,7 +97,7 @@ export function translateDocument() {
       node.nodeValue = rendered;
     }
   }
-  document.querySelectorAll('[aria-label], [title]').forEach(el => {
+  root.querySelectorAll('[aria-label], [title]').forEach(el => {
     if (el.id === 'language-toggle') return;
     for (const attr of ['aria-label', 'title']) {
       const value = el.getAttribute(attr);
@@ -105,8 +105,9 @@ export function translateDocument() {
       if (translations.has(zh)) el.setAttribute(attr, t(zh));
     }
   });
-  const button = document.querySelector('#language-toggle');
-  button.textContent = language === 'en' ? '中文' : 'English';
+  const button = root.querySelector('#language-toggle');
+  if (!button) return;
+  (button.querySelector('.language-label') || button).textContent = language === 'en' ? '中文' : 'English';
   button.lang = language === 'en' ? 'zh-CN' : 'en';
   button.setAttribute('aria-label', language === 'en' ? '切换到中文' : 'Switch to English');
 }

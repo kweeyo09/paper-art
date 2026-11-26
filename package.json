@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node serve.cjs",
-    "check": "node --check dist/app.js && node --check dist/i18n.js && node --check dist/window-preview.js && node --check dist/window-3d.js && node --check dist/scenery.js",
+    "check": "node --check dist/app.js && node --check dist/studio.js && node --check dist/layout-editor.js && node --check dist/i18n.js && node --check dist/window-preview.js && node --check dist/window-3d.js && node --check dist/scenery.js && node --check scripts/layout-css.cjs",
     "validate": "node scripts/validate.mjs",
     "vendor": "node scripts/vendor.mjs"
   },

@@ -131,9 +131,23 @@ export async function createWindow3D(stage, artwork, onMove) {
   function setPlacement(x,y,size){const side=2.1*size/100;paper.scale.set(side,side,1);paper.position.x=THREE.MathUtils.clamp((x/100-.5)*4.3,-1.85+side/2,1.85-side/2);paper.position.y=THREE.MathUtils.clamp((.5-y/100)*3.2,-1.68+side/2,1.68-side/2);renderer.shadowMap.needsUpdate=true;requestRender();}
   const ray=new THREE.Raycaster(),mouse=new THREE.Vector2(),plane=new THREE.Plane(new THREE.Vector3(0,0,1),-.025),hit=new THREE.Vector3();
   function locate(e){const r=renderer.domElement.getBoundingClientRect();mouse.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mouse,camera);return ray.ray.intersectPlane(plane,hit);}
-  renderer.domElement.addEventListener('pointerdown',e=>{if(e.button!==0||!locate(e))return;if(Math.abs(hit.x-paper.position.x)>paper.scale.x/2||Math.abs(hit.y-paper.position.y)>paper.scale.y/2)return;e.preventDefault();drag={id:e.pointerId,dx:paper.position.x-hit.x,dy:paper.position.y-hit.y};renderer.domElement.setPointerCapture(e.pointerId);artwork.focus({preventScroll:true});renderer.domElement.style.cursor='grabbing';});
-  renderer.domElement.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId||!locate(e))return;onMove(((hit.x+drag.dx)/4.3+.5)*100,(.5-(hit.y+drag.dy)/3.2)*100);});
-  function stopDrag(){drag=null;renderer.domElement.style.cursor='grab';}renderer.domElement.addEventListener('pointerup',stopDrag);renderer.domElement.addEventListener('pointercancel',stopDrag);renderer.domElement.addEventListener('lostpointercapture',stopDrag);
+  // Drag the paper to move it; drag anywhere else in the scene to turn the viewing angle.
+  const onPaper=()=>Math.abs(hit.x-paper.position.x)<=paper.scale.x/2&&Math.abs(hit.y-paper.position.y)<=paper.scale.y/2;
+  const ANGLE_LIMIT=25,DEGREES_PER_WIDTH=60;
+  renderer.domElement.addEventListener('pointerdown',e=>{
+    if(e.button!==0)return;e.preventDefault();renderer.domElement.setPointerCapture(e.pointerId);
+    if(locate(e)&&onPaper()){drag={kind:'paper',id:e.pointerId,dx:paper.position.x-hit.x,dy:paper.position.y-hit.y};artwork.focus({preventScroll:true});}
+    else drag={kind:'angle',id:e.pointerId,startX:e.clientX,startAngle:angle};
+    renderer.domElement.style.cursor='grabbing';
+  });
+  renderer.domElement.addEventListener('pointermove',e=>{
+    if(!drag){renderer.domElement.style.cursor=locate(e)&&onPaper()?'grab':'ew-resize';return;}
+    if(drag.id!==e.pointerId)return;
+    if(drag.kind==='paper'){if(locate(e))onMove(((hit.x+drag.dx)/4.3+.5)*100,(.5-(hit.y+drag.dy)/3.2)*100);return;}
+    const width=renderer.domElement.getBoundingClientRect().width||1;
+    setAngle(THREE.MathUtils.clamp(drag.startAngle-(e.clientX-drag.startX)/width*DEGREES_PER_WIDTH,-ANGLE_LIMIT,ANGLE_LIMIT));
+  });
+  function stopDrag(){drag=null;renderer.domElement.style.cursor='';}renderer.domElement.addEventListener('pointerup',stopDrag);renderer.domElement.addEventListener('pointercancel',stopDrag);renderer.domElement.addEventListener('lostpointercapture',stopDrag);
   let last=0;
   function frame(now){raf=0;if(!active||disposed||document.hidden||!inView)return;
     const moving=motionEnabled;
@@ -151,7 +165,7 @@ export async function createWindow3D(stage, artwork, onMove) {
   reduced.addEventListener('change',requestRender);
   document.addEventListener('visibilitychange',requestRender);
   renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();active=false;cancelAnimationFrame(raf);raf=0;stage.classList.remove('has-3d');stage.dispatchEvent(new Event('previewfallback'));});
-  renderer.domElement.addEventListener('webglcontextrestored',()=>{stage.classList.add('has-3d');active=!document.querySelector('#window-preview').hidden;paperTexture.needsUpdate=true;requestRender();});
+  renderer.domElement.addEventListener('webglcontextrestored',()=>{stage.classList.add('has-3d');active=!stage.closest('.window-preview')?.hidden;paperTexture.needsUpdate=true;requestRender();});
   stage.append(renderer.domElement);stage.classList.add('has-3d');
   return {setLight,setPlacement,setAngle,setMotion,async prepare(){
     resize();

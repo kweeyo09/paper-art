@@ -1,0 +1,13 @@
+/* Studio layout values. Edit by hand, or open the studio on a local server with ?edit and press Save. */
+.paper-studio {
+  --ps-tools-width: 256px;
+  --ps-patterns-width: 156px;
+  --ps-canvas-height: 460px;
+  --ps-page-padding: 44px;
+  --ps-sheet-radius: 16px;
+  --ps-text-scale: 1;
+  --ps-intro-display: none;
+  --red: #ae302a;
+  --bg: #f5f1e8;
+  --paper: #faf7ef;
+}
