@@ -44,12 +44,14 @@
 .paper-studio p { margin: 0; }
 .paper-studio .ps-icon-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 .paper-studio .ps-page { max-width: 1536px; margin: 0 auto; padding-block: 0; padding-inline: max(var(--ps-edge), env(safe-area-inset-left)) max(var(--ps-edge), env(safe-area-inset-right)); }
-/* Full page: the footer sits at the bottom of the screen even when the studio is shorter. */
+/* Full page: the studio grows to fill the screen, so its bottom rule meets the footer with no gap. */
 .paper-studio.is-standalone .ps-page { display: flex; flex-direction: column; min-height: 100vh; min-height: 100svh; }
-.paper-studio.is-standalone .ps-main { flex: 1 0 auto; }
+.paper-studio.is-standalone .ps-main { flex: 1 0 auto; display: flex; flex-direction: column; }
+.paper-studio.is-standalone .studio, .paper-studio.is-standalone .window-preview { flex: 1 0 auto; }
+@media (max-width: 640px) { .paper-studio.is-standalone .studio { flex: 0 0 auto; } }
 
 /* ── Header ── */
-.paper-studio .ps-header { min-height: 84px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--line); }
+.paper-studio .ps-header { min-height: 104px; padding-block: calc(var(--ps-gap) * 1.1); display: flex; align-items: center; justify-content: space-between; gap: var(--ps-gap); border-bottom: 1px solid var(--line); }
 .paper-studio .brand { display: flex; gap: 15px; align-items: center; font: 600 22px var(--serif); letter-spacing: 4px; color: var(--ink); }
 .paper-studio .seal { border: 1px solid var(--red); outline: 1px solid var(--red); outline-offset: 3px; color: var(--red); font: 21px/1.05 "Ma Shan Zheng", var(--serif); padding: 3px 6px; transform: rotate(-3deg); letter-spacing: 0; flex: none; }
 .paper-studio .brand-name { display: block; }
@@ -211,7 +213,7 @@
   .paper-studio .pattern-list { grid-template-columns: repeat(3, 1fr); }
 }
 @media (max-width: 640px) {
-  .paper-studio .ps-header { min-height: 72px; }
+  .paper-studio .ps-header { min-height: 84px; }
   .paper-studio .brand { font-size: 19px; gap: 12px; letter-spacing: 2px; }
   .paper-studio .seal { font-size: 17px; }
   .paper-studio .brand-sub { letter-spacing: 1px; font-size: 11px; }
